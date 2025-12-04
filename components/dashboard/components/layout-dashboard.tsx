@@ -5,7 +5,8 @@ import {
   NavSide,
 } from "@/components/dashboard/navigations/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { data } from "./side.config";
+import { navigation, Switcher } from "@/side.config";
+import { TeamSwitcher } from "../navigations/team-switcher";
 
 export default function LayoutDashboard({
   children,
@@ -14,10 +15,8 @@ export default function LayoutDashboard({
 }) {
   return (
     <SidebarProvider>
-      <AppSidebar>
-        {/* <NavSide variant="menu" data={data.main} label="Menu" /> */}
-        <NavSide variant="compact" data={data.sideMenu} label="Side Menu" />
-        <NavSide variant="collaps" data={data.menus} label="Text Rich" />
+      <AppSidebar data={navigation}>
+        {/* <TeamSwitcher data={Switcher} /> */}
       </AppSidebar>
       <SidebarInset>
         <NavHeader />

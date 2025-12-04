@@ -42,16 +42,20 @@ import { NavUser } from "./nav-user";
 
 // This is sample data.
 
-export function AppSidebar({
-  children,
-  ...props
-}: React.ComponentProps<typeof Sidebar>) {
+type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
+  data: any;
+};
+
+export function AppSidebar({ children, data, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <Logo />
       </SidebarHeader>
-      <SidebarContent>{children}</SidebarContent>
+      <SidebarContent>
+        {children}
+        <NavSide data={data} />
+      </SidebarContent>
       <SidebarRail />
     </Sidebar>
   );
@@ -60,33 +64,28 @@ export function AppSidebar({
 export function NavSide({
   data,
   label,
-  variant,
+  variant = "compact",
 }: {
   data: any;
   label?: string;
-  variant: "collaps" | "menu" | "compact";
+  variant?: "collaps" | "menu" | "compact";
 }) {
-  const menuVariants = [
-    {
-      name: "collaps",
-      component: NavCollaps,
-    },
-    {
-      name: "menu",
-      component: NavMenu,
-    },
-    {
-      name: "compact",
-      component: NavCompact,
-    },
-  ] as const;
+  // Khusus variant "compact", kita serahkan langsung objek navigasi
+  // ke `NavCompact`, karena di sana kita akan membuat beberapa group
+  // berdasarkan struktur di `side.config.ts`.
+  if (variant === "compact") {
+    return <NavCompact navigation={data} />;
+  }
+
   return (
     <>
       <SidebarGroup>
         <SidebarGroupLabel>{label}</SidebarGroupLabel>
-        {menuVariants
-          .find((v) => v.name === variant)
-          ?.component({ items: data }) ?? null}
+        {variant === "collaps" ? (
+          <NavCollaps items={data} />
+        ) : variant === "menu" ? (
+          <NavMenu items={data} />
+        ) : null}
       </SidebarGroup>
     </>
   );
@@ -170,83 +169,103 @@ export function NavCollaps({
   );
 }
 
-export function NavCompact({
-  items,
-}: {
-  items: Array<
-    | {
-        name: string;
-        url: string;
-        icon: LucideIcon;
-      }
-    | {
-        title: string;
-        url: string;
-        icon?: LucideIcon;
-        isActive?: boolean;
-        items?: Array<{
-          title?: string;
-          name?: string;
-          url: string;
-        }>;
-      }
-  >;
-}) {
+type CompactSimpleItem = {
+  name: string;
+  url: string;
+  icon: LucideIcon;
+};
+
+type CompactCollapsibleItem = {
+  title: string;
+  url: string;
+  icon?: LucideIcon;
+  isActive?: boolean;
+  items?: Array<{
+    title?: string;
+    name?: string;
+    url: string;
+  }>;
+};
+
+type CompactItem = CompactSimpleItem | CompactCollapsibleItem;
+
+type CompactNavigation = {
+  [key: string]: CompactItem[];
+};
+
+function formatGroupLabel(key: string) {
+  // Contoh: "sideMenu" -> "Side Menu", "menus" -> "Menus"
+  const withSpaces = key.replace(/([A-Z])/g, " $1");
+  return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+}
+
+export function NavCompact({ navigation }: { navigation: CompactNavigation }) {
+  const entries = Object.entries(navigation);
+
   return (
-    <SidebarMenu>
-      {items.map((item, index) => {
-        // Check if it's a collapsible item (has 'title' and 'items')
-        if ("title" in item && item.items && item.items.length > 0) {
-          return (
-            <Collapsible
-              key={item.title}
-              asChild
-              defaultOpen={item.isActive}
-              className="group/collapsible"
-            >
-              <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton tooltip={item.title}>
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub>
-                    {item.items.map((subItem) => (
-                      <SidebarMenuSubItem key={subItem.title || subItem.name}>
-                        <SidebarMenuSubButton asChild>
-                          <a href={subItem.url}>
-                            <span>{subItem.title || subItem.name}</span>
-                          </a>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </SidebarMenuItem>
-            </Collapsible>
-          );
-        }
+    <>
+      {entries.map(([groupKey, items]) => (
+        <SidebarGroup key={groupKey}>
+          <SidebarGroupLabel>{formatGroupLabel(groupKey)}</SidebarGroupLabel>
+          <SidebarMenu>
+            {items.map((item) => {
+              // Item dengan anak (collapsible)
+              if ("title" in item && item.items && item.items.length > 0) {
+                return (
+                  <Collapsible
+                    key={item.title}
+                    asChild
+                    defaultOpen={item.isActive}
+                    className="group/collapsible"
+                  >
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip={item.title}>
+                          {item.icon && <item.icon />}
+                          <span>{item.title}</span>
+                          <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.items.map((subItem) => (
+                            <SidebarMenuSubItem
+                              key={subItem.title || subItem.name}
+                            >
+                              <SidebarMenuSubButton asChild>
+                                <a href={subItem.url}>
+                                  <span>{subItem.title || subItem.name}</span>
+                                </a>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                );
+              }
 
-        // Otherwise it's a simple menu item (has 'name')
-        if ("name" in item) {
-          return (
-            <SidebarMenuItem key={item.name}>
-              <SidebarMenuButton asChild tooltip={item.name}>
-                <a href={item.url}>
-                  <item.icon />
-                  <span>{item.name}</span>
-                </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          );
-        }
+              // Item sederhana
+              if ("name" in item) {
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton asChild tooltip={item.name}>
+                      <a href={item.url}>
+                        <item.icon />
+                        <span>{item.name}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              }
 
-        return null;
-      })}
-    </SidebarMenu>
+              return null;
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+      ))}
+    </>
   );
 }
 

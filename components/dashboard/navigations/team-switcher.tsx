@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronsUpDown, Plus } from "lucide-react"
+import * as React from "react";
+import { ChevronsUpDown, Plus } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -11,28 +11,50 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
-export function TeamSwitcher({
-  teams,
-}: {
-  teams: {
-    name: string
-    logo: React.ElementType
-    plan: string
-  }[]
-}) {
-  const { isMobile } = useSidebar()
-  const [activeTeam, setActiveTeam] = React.useState(teams[0])
+type SwitcherConfig = {
+  [name: string]: {
+    logo: React.ElementType;
+    plan: string;
+  }[];
+};
+
+type Team = {
+  name: string;
+  logo: React.ElementType;
+  plan: string;
+};
+
+export function TeamSwitcher({ data }: { data: SwitcherConfig }) {
+  const { isMobile } = useSidebar();
+  const teams: Team[] = React.useMemo(
+    () =>
+      Object.entries(data)
+        .filter(([, configs]) => configs.length > 0)
+        .map(([name, configs]) => {
+          const primary = configs[0];
+          return {
+            name,
+            logo: primary.logo,
+            plan: primary.plan,
+          };
+        }),
+    [data]
+  );
+
+  const [activeTeam, setActiveTeam] = React.useState<Team | null>(
+    teams[0] ?? null
+  );
 
   if (!activeTeam) {
-    return null
+    return null;
   }
 
   return (
@@ -87,5 +109,5 @@ export function TeamSwitcher({
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }
